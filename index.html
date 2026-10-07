@@ -164,6 +164,15 @@ details.aviso .texto{margin-top:8px;max-height:260px}
 .nota-res textarea{width:100%;min-height:64px;resize:vertical;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
 .hecho{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:14px;color:var(--ink-2)}
 .solo-lectura{font-size:13.5px;color:var(--ink-3)}
+.chip-guardando{background:var(--accent-soft);color:var(--accent)}
+.modo{font-size:13px;color:var(--ink-3)}
+.activar{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.activar h2{margin:0;font-family:var(--font-display);font-size:18px;line-height:1.25}
+.activar p{margin:0;max-width:72ch;color:var(--ink-2)}
+.activar label{font-size:13.5px;color:var(--ink-2);font-weight:500}
+.activar input{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 12px;width:100%;max-width:560px;min-width:0;font-family:var(--font-mono);font-size:15px}
+.activar-fila{display:flex;flex-wrap:wrap;gap:8px}
+.activar-err{color:var(--crit);font-weight:500}
 
 .vacio{border:1px dashed var(--line);border-radius:6px;padding:36px 20px;text-align:center;color:var(--ink-2);background:var(--surface)}
 .vacio strong{display:block;font-family:var(--font-display);font-size:18px;color:var(--ink);margin-bottom:4px}
@@ -220,11 +229,20 @@ details.aviso .texto{margin-top:8px;max-height:260px}
       <p class="eyebrow">Gestión de certificados · WIT Abogados</p>
       <h1>Control de notificaciones</h1>
     </div>
-    <div class="top-der"><p class="today" id="hoy"></p><div class="act-fila"><p class="act" id="act"></p><button class="btn btn-min" id="bloquear" type="button">Bloquear</button></div></div>
+    <div class="top-der"><p class="today" id="hoy"></p><div class="act-fila"><p class="act" id="act"></p><span class="modo" id="modo"></span><button class="btn btn-min" id="activar-btn" type="button" hidden>Activar cambios</button><button class="btn btn-min" id="quitar-btn" type="button" hidden>Quitar la clave de este equipo</button><button class="btn btn-min" id="bloquear" type="button">Bloquear</button></div></div>
   </header>
 
   <div class="alerta" id="alerta" role="status" hidden></div>
   <div class="alerta alerta-amar" id="alerta-amar" role="status" hidden></div>
+
+  <form class="activar" id="activar" hidden>
+    <h2>Activar los cambios de estado</h2>
+    <p>Pega la clave de acceso de GitHub de este repositorio (permiso «Contents: Read and write»). Se queda guardada solo en este navegador, cifrada con la contraseña de la web; no se sube a ningún sitio. En cada ordenador o móvil desde el que se quieran cambiar estados hay que pegarla una vez.</p>
+    <label for="llave-in">Clave de acceso de GitHub</label>
+    <input id="llave-in" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="github_pat_…">
+    <p class="activar-err" id="llave-err" role="alert" hidden></p>
+    <div class="activar-fila"><button class="btn btn-pri" type="submit" id="llave-ok">Guardar la clave</button><button class="btn" type="button" id="llave-no">Cancelar</button></div>
+  </form>
 
   <nav class="tabs" id="tabs" role="tablist" aria-label="Pantallas">
     <button class="tab" role="tab" id="tab-pendientes" data-tab="pendientes" aria-selected="true">Pendientes <span class="tab-n" data-n="pendientes">–</span></button>
@@ -249,7 +267,7 @@ details.aviso .texto{margin-top:8px;max-height:260px}
   </main>
 
   <p class="pie">Los plazos se cuentan desde la fecha en que la notificación se guardó en la carpeta. Días hábiles: de lunes a viernes, sin los festivos nacionales, de la Comunidad de Madrid y de Madrid capital. Una notificación pendiente se pone en amarillo cuando quedan 2 días hábiles o menos para un plazo de alegación o recurso, y en rojo solo cuando ya ha vencido el último plazo de alegación o recurso.</p>
-  <p class="pie">Versión de consulta: muestra las notificaciones tal como estaban en la fecha de actualización indicada arriba. Los cambios de estado (pasar a pendientes, resueltas o archivadas) se hacen en el panel de Claude y llegan aquí en la siguiente actualización.</p>
+  <p class="pie" id="pie-modo"></p>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -263,7 +281,7 @@ details.aviso .texto{margin-top:8px;max-height:260px}
   var MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 
   var state = {docs:[], cargado:false, sinDb:false, error:false, tab:"pendientes", filtro:"todas", q:"",
-               abierta:null, hoy:""};
+               abierta:null, hoy:"", resolviendo:null, nota:"", ocupado:{}};
 
   var elLista = document.getElementById("lista");
   var elAlerta = document.getElementById("alerta");
@@ -336,7 +354,7 @@ details.aviso .texto{margin-top:8px;max-height:260px}
       carpeta:txt(d.carpeta), respNombre:txt(resp.nombre), respEmail:txt(resp.email),
       avisoEnviado: d.avisoEnviado===true, archivo:txt(d.archivo),
       enlace: /^https:\/\//.test(txt(d.enlace)) ? d.enlace : "",
-      resueltaEl: esISO(d.resueltaEl)?d.resueltaEl:"", notaResolucion:txt(d.notaResolucion)
+      resueltaEl: esISO(d.resueltaEl)?d.resueltaEl:"", notaResolucion:txt(d.notaResolucion), web:txt(d._web)
     };
   }
   var toastT=null;
@@ -435,9 +453,27 @@ details.aviso .texto{margin-top:8px;max-height:260px}
     h+= n.borrador ? '<pre class="texto" data-borrador-texto>'+esc(n.borrador)+'</pre>' : '<p class="sin-borrador">No requiere escrito de contestación.</p>';
     h+='</section>';
 
-    if(n.estado==="resuelta" || (n.estado==="archivada" && (n.resueltaEl || n.notaResolucion))){
-      h+='<div class="acciones"><div class="hecho"><span class="chip chip-hecho">Resuelta'+(n.resueltaEl?' el '+fmt(n.resueltaEl):'')+'</span>'+(n.notaResolucion?'<span>'+esc(n.notaResolucion)+'</span>':'')+'</div></div>';
+    h+='<div class="acciones">';
+    if((n.estado==="resuelta" || n.estado==="archivada") && (n.resueltaEl || n.notaResolucion)){
+      h+='<div class="hecho"><span class="chip chip-hecho">Resuelta'+(n.resueltaEl?' el '+fmt(n.resueltaEl):'')+'</span>'+(n.notaResolucion?'<span>'+esc(n.notaResolucion)+'</span>':'')+'</div>';
     }
+    if(sync.modo==="activo"){
+      var dis = (state.ocupado[n.id] || sync.ocupado) ? " disabled" : "";
+      if(state.resolviendo===n.id && n.estado!=="resuelta"){
+        h+='<div class="nota-res"><label for="nota-'+esc(n.id)+'">Cómo se resolvió (opcional)</label><textarea id="nota-'+esc(n.id)+'" data-nota data-foco="nota" placeholder="Por ejemplo: alegaciones presentadas el 07/10, justificante en la carpeta del cliente.">'+esc(state.nota)+'</textarea></div>';
+        h+='<button class="btn btn-pri" data-action="confirmar" data-foco="conf"'+dis+'>Confirmar: pasar a resueltas</button><button class="btn" data-action="cancelar" data-foco="canc">Cancelar</button>';
+      }else{
+        var pri = n.estado==="pendiente" ? "resolver" : "reabrir";
+        var bt = function(accion,foco,texto){ return '<button class="btn'+(accion===pri?' btn-pri':'')+'" data-action="'+accion+'" data-foco="'+foco+'"'+dis+'>'+texto+'</button>'; };
+        if(n.estado!=="pendiente") h+=bt("reabrir","reab","Pasar a pendientes");
+        if(n.estado!=="resuelta") h+=bt("resolver","res","Pasar a resueltas");
+        if(n.estado!=="archivada") h+=bt("archivar","arch","Pasar a archivadas");
+      }
+      if(n.web) h+='<span class="solo-lectura">Estado cambiado desde esta web. Llegará al panel de Claude y a la carpeta del PDF en la siguiente sincronización.</span>';
+    }else{
+      h+='<span class="solo-lectura">'+(sync.modo==="cargando" ? "Comprobando si se pueden hacer cambios…" : "Solo consulta: desde aquí todavía no se puede cambiar el estado.")+'</span>';
+    }
+    h+='</div>';
     h+='</div>';
     return h;
   }
@@ -455,6 +491,7 @@ details.aviso .texto{margin-top:8px;max-height:260px}
     }else{
       lab="Guardada"; fecha=n.guardada; chips+='<span class="chip chip-neutro">'+(n.estado==="archivada"?"Informativa":"Desechada")+'</span>';
     }
+    if(state.ocupado[n.id]) chips += '<span class="chip chip-guardando">Guardando…</span>';
     var rojo = al && al.nivel==="vencida", amar = al && al.nivel==="amarillo";
     return '<article class="asiento'+(rojo?' is-rojo':'')+(amar?' is-amarillo':'')+(abierta?' is-abierta':'')+'" data-id="'+esc(n.id)+'">'+
       '<button class="asiento-cab" data-action="toggle" data-foco="cab" aria-expanded="'+abierta+'">'+
@@ -550,19 +587,220 @@ details.aviso .texto{margin-top:8px;max-height:260px}
     var art=b.closest("[data-id]"); if(!art) return;
     var id=art.dataset.id, n=porId(id); if(!n) return;
     switch(b.dataset.action){
-      case "toggle": state.abierta = state.abierta===id ? null : id; render(); break;
+      case "toggle": state.abierta = state.abierta===id ? null : id; if(state.resolviendo!==state.abierta){ state.resolviendo=null; state.nota=""; } render(); break;
+      case "resolver": state.resolviendo=id; state.nota=n.notaResolucion||""; render(); var t=document.getElementById("nota-"+id); if(t) t.focus(); break;
+      case "cancelar": state.resolviendo=null; state.nota=""; render(); break;
+      case "confirmar":
+        var nota=state.nota.trim().slice(0,2000);
+        state.resolviendo=null; state.nota=""; state.abierta=null;
+        guardaEstado(id,{estado:"resuelta",resueltaEl:state.hoy,notaResolucion:nota},"Pasada a Resueltas."); break;
+      case "archivar": state.abierta=null; state.resolviendo=null; guardaEstado(id,{estado:"archivada",resueltaEl:n.resueltaEl,notaResolucion:n.notaResolucion},"Pasada a Archivadas."); break;
+      case "reabrir": state.abierta=null; state.resolviendo=null; guardaEstado(id,{estado:"pendiente",resueltaEl:"",notaResolucion:""},"Pasada a Pendientes."); break;
       case "copiar-aviso": copiar(textoAviso(n),"Aviso copiado.",null); var d=art.querySelector("details.aviso"); if(d) d.open=true; break;
       case "copiar-borrador": copiar(n.borrador,"Borrador copiado.",art.querySelector("[data-borrador-texto]")); break;
     }
   });
+  elLista.addEventListener("input",function(ev){ if(ev.target.matches && ev.target.matches("[data-nota]")) state.nota=ev.target.value; });
   elTabs.addEventListener("click",function(ev){
     var b=ev.target.closest(".tab"); if(!b) return;
-    state.tab=b.dataset.tab; state.abierta=null;
+    state.tab=b.dataset.tab; state.abierta=null; state.resolviendo=null; state.nota="";
     try{ history.replaceState(null,"","#"+state.tab); }catch(e){}
     render();
   });
   elFiltros.addEventListener("click",function(ev){ var b=ev.target.closest(".filtro"); if(!b) return; state.filtro=b.dataset.filtro; render(); });
   elBuscar.addEventListener("input",function(){ state.q=elBuscar.value; render(); });
+
+  /* ---------- cambios de estado guardados en GitHub ---------- */
+  // Rama "estados" del repositorio: estados.json guarda los cambios de estado, cifrados con la contraseña
+  // de la web. La clave de acceso de GitHub no se sube nunca: se guarda solo en este navegador, cifrada.
+  var API = "https://api.github.com/repos/CurroAriza/GESTION-NOTIFICACIONES";
+  var RAW = "https://raw.githubusercontent.com/CurroAriza/GESTION-NOTIFICACIONES/estados/";
+  var RAMA = "estados";
+  var ESTADOS = ["pendiente","resuelta","archivada","desechada"];
+  var sync = {clave:"", llaves:{}, token:"", sha:null, mapa:{}, aplicadoHasta:"", modo:"cargando", ocupado:false};
+  var baseDocs = [];
+  var elModo = document.getElementById("modo"), elActivarBtn = document.getElementById("activar-btn");
+  var elActivar = document.getElementById("activar"), elLlaveIn = document.getElementById("llave-in");
+  var elLlaveOk = document.getElementById("llave-ok"), elLlaveNo = document.getElementById("llave-no");
+  var elLlaveErr = document.getElementById("llave-err"), elPieModo = document.getElementById("pie-modo");
+  var elQuitar = document.getElementById("quitar-btn");
+  var LLAVE_LS = "control-notificaciones-llave";
+  function llaveLocal(){ try{ return JSON.parse(localStorage.getItem(LLAVE_LS) || "null"); }catch(e){ return null; } }
+  function guardaLlave(C){ try{ if(C) localStorage.setItem(LLAVE_LS, JSON.stringify(C)); else localStorage.removeItem(LLAVE_LS); }catch(e){} }
+
+  function b64(u8){ var t=""; for(var i=0;i<u8.length;i++) t+=String.fromCharCode(u8[i]); return btoa(t); }
+  function conLimite(p, ms){
+    return new Promise(function(ok, ko){
+      var t = setTimeout(function(){ ko({code:"tiempo"}); }, ms);
+      Promise.resolve(p).then(function(v){ clearTimeout(t); ok(v); }, function(e){ clearTimeout(t); ko(e); });
+    });
+  }
+  function llaveAES(salt, iter){
+    var k = salt+"|"+iter;
+    if(!sync.llaves[k]) sync.llaves[k] = crypto.subtle.importKey("raw", new TextEncoder().encode(sync.clave), "PBKDF2", false, ["deriveKey"]).then(function(m){
+      return crypto.subtle.deriveKey({name:"PBKDF2", salt:bytes(salt), iterations:iter, hash:"SHA-256"}, m, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]);
+    });
+    return sync.llaves[k];
+  }
+  function descifra(C){
+    if(!C || typeof C.salt!=="string" || typeof C.iv!=="string" || typeof C.datos!=="string") return Promise.reject({code:"formato"});
+    var iter = (typeof C.iter==="number" && C.iter>=100000 && C.iter<=2000000) ? C.iter : 600000;
+    return llaveAES(C.salt, iter).then(function(key){ return crypto.subtle.decrypt({name:"AES-GCM", iv:bytes(C.iv)}, key, bytes(C.datos)); })
+      .then(function(buf){ return JSON.parse(new TextDecoder().decode(buf)); });
+  }
+  function cifra(obj){
+    var D = window.DATOS_CIFRADOS, iv = crypto.getRandomValues(new Uint8Array(12));
+    return llaveAES(D.salt, D.iter).then(function(key){ return crypto.subtle.encrypt({name:"AES-GCM", iv:iv}, key, new TextEncoder().encode(JSON.stringify(obj))); })
+      .then(function(buf){ return {v:1, iter:D.iter, salt:D.salt, iv:b64(iv), datos:b64(new Uint8Array(buf))}; });
+  }
+  function gh(ruta, opt, token){
+    opt = opt || {};
+    var h = {"Accept":"application/vnd.github+json", "Authorization":"Bearer "+(token || sync.token)};
+    if(opt.body) h["Content-Type"] = "application/json";
+    return conLimite(fetch(API+ruta, {method:opt.method || "GET", headers:h, body:opt.body, cache:"no-store"}), 20000)
+      .then(null, function(e){ throw (e && e.code) ? e : {code:"red"}; });
+  }
+  function leeEstados(){
+    return gh("/contents/estados.json?ref="+RAMA).then(function(r){
+      if(r.status===404){ sync.sha=null; sync.mapa={}; return; }
+      if(!r.ok) throw {code:"api", status:r.status};
+      return r.json().then(function(j){
+        var C; try{ C = JSON.parse(atob(String(j.content || "").replace(/\s/g,""))); }catch(e){ C = null; }
+        return descifra(C).then(function(m){ sync.sha=j.sha; sync.mapa = (m && m.estados && typeof m.estados==="object") ? m.estados : {}; },
+                                function(){ sync.sha=j.sha; sync.mapa={}; });
+      });
+    });
+  }
+  // Solo cuentan los cambios posteriores a lo que Claude ya llevó al panel (aplicadoHasta).
+  function vivos(m){
+    var o = {};
+    Object.keys(m || {}).forEach(function(k){
+      var x = m[k];
+      if(x && typeof x==="object" && typeof x.ts==="string" && x.ts>sync.aplicadoHasta && ESTADOS.indexOf(x.estado)>=0) o[k] = x;
+    });
+    return o;
+  }
+  function aplicaMapa(){
+    var m = vivos(sync.mapa);
+    state.docs = baseDocs.map(function(d){
+      var x = m[d.id];
+      return x ? Object.assign({}, d, {estado:x.estado, resueltaEl:txt(x.resueltaEl), notaResolucion:txt(x.notaResolucion), _web:x.ts}) : d;
+    });
+  }
+  function ponModo(modo){
+    sync.modo = modo;
+    elModo.textContent = modo==="activo" ? "Cambios de estado activados" : (modo==="cargando" ? "" : "Solo consulta");
+    elActivarBtn.hidden = !(modo==="consulta" || modo==="caducada");
+    elActivarBtn.textContent = modo==="caducada" ? "Poner una clave nueva" : "Activar cambios";
+    elQuitar.hidden = modo!=="activo";
+    elPieModo.textContent = modo==="activo"
+      ? "Los cambios de estado que hagas aquí se guardan cifrados y los ve cualquiera que abra esta web con la contraseña. Llegan al panel de Claude y a las carpetas de los PDF en la siguiente sincronización. Las notificaciones nuevas aparecen cuando se actualizan los datos (fecha de arriba)."
+      : modo==="caducada" ? "La clave de acceso de GitHub guardada en este equipo ha caducado o ya no vale: hasta que se ponga una nueva, desde aquí solo se puede consultar."
+      : modo==="sinconexion" ? "No se ha podido conectar con GitHub para guardar cambios. Recarga la página para volver a intentarlo; mientras tanto, solo consulta."
+      : "Desde este equipo solo se puede consultar. Se ven los cambios de estado hechos desde otros equipos, con unos minutos de retraso. Para cambiar estados desde aquí hay que activar los cambios una vez con la clave de acceso.";
+    render();
+  }
+  function errorTxt(e){
+    if(e && (e.code==="tiempo" || e.code==="red")) return "No hay conexión con GitHub. Comprueba internet e inténtalo de nuevo.";
+    if(e && e.status===401) return "La clave de GitHub ha caducado o se ha retirado. Hay que poner una nueva.";
+    if(e && (e.status===403 || e.status===404)) return "La clave de GitHub no tiene permiso para escribir en el repositorio.";
+    return "No se ha podido guardar. Inténtalo de nuevo.";
+  }
+  // Sin clave de GitHub: lectura pública del archivo cifrado (puede ir unos minutos por detrás).
+  function leeEstadosPublico(){
+    return conLimite(fetch(RAW+"estados.json?t="+Date.now(), {cache:"no-store"}), 15000).then(function(r){ return r.ok ? r.json() : null; }).then(null, function(){ return null; }).then(function(C){
+      if(!C){ sync.mapa = {}; return; }
+      return descifra(C).then(function(m){ sync.mapa = (m && m.estados && typeof m.estados==="object") ? m.estados : {}; }, function(){ sync.mapa = {}; });
+    });
+  }
+  function iniciaSync(){
+    ponModo("cargando");
+    var sinClave = function(modo){ return leeEstadosPublico().then(function(){ if(!sync.clave) return; aplicaMapa(); ponModo(modo); }); };
+    var L = llaveLocal();
+    if(!L){ sinClave("consulta"); return; }
+    descifra(L).then(function(o){
+      if(!o || typeof o.token!=="string" || !o.token) throw {code:"llave"};
+      return o.token;
+    }, function(){ throw {code:"llave"}; }).then(function(tok){ sync.token = tok; return leeEstados(); }).then(function(){
+      if(!sync.clave) return;
+      aplicaMapa(); ponModo("activo");
+    }, function(e){
+      sync.token = "";
+      if(e && (e.code==="llave" || e.status===401)){ guardaLlave(null); sinClave("caducada"); }
+      else sinClave("sinconexion");
+    });
+  }
+  function guardaEstado(id, cambio, okMsg){
+    if(sync.modo!=="activo" || sync.ocupado) return;
+    sync.ocupado = true; state.ocupado[id] = true; render();
+    var nuevo = null;
+    var intento = function(n){
+      return leeEstados().then(function(){
+        var ts = new Date().toISOString();
+        if(ts<=sync.aplicadoHasta) ts = new Date(Date.parse(sync.aplicadoHasta)+1).toISOString();
+        nuevo = vivos(sync.mapa);
+        nuevo[id] = {estado:cambio.estado, resueltaEl:cambio.resueltaEl || "", notaResolucion:cambio.notaResolucion || "", ts:ts};
+        return cifra({v:1, estados:nuevo});
+      }).then(function(C){
+        var cuerpo = {message:"Cambio de estado desde la web", content:btoa(JSON.stringify(C)), branch:RAMA};
+        if(sync.sha) cuerpo.sha = sync.sha;
+        return gh("/contents/estados.json", {method:"PUT", body:JSON.stringify(cuerpo)});
+      }).then(function(r){
+        if((r.status===409 || r.status===422) && n<2) return intento(n+1);
+        if(!r.ok) throw {code:"api", status:r.status};
+        return r.json().then(function(j){ sync.sha = (j && j.content) ? j.content.sha : null; sync.mapa = nuevo; });
+      });
+    };
+    intento(0).then(function(){ aplicaMapa(); toast(okMsg); }, function(e){
+      toast(errorTxt(e));
+      if(e && e.status===401){ sync.token=""; guardaLlave(null); sync.ocupado=false; delete state.ocupado[id]; ponModo("caducada"); }
+    }).then(function(){ sync.ocupado = false; delete state.ocupado[id]; render(); });
+  }
+  // Una vez por equipo: comprueba la clave contra GitHub (crea la rama "estados" si falta y hace una
+  // escritura de prueba) y la guarda cifrada en este navegador. La clave no sale de aquí.
+  function activar(tok){
+    var paso = function(ruta, opt){ return gh(ruta, opt, tok); };
+    var bien = function(r){ if(!r.ok) throw {code:"api", status:r.status}; return r; };
+    var antes = sync.token;
+    return paso("").then(bien).then(function(){ return paso("/git/ref/heads/"+RAMA); }).then(function(r){
+      if(r.ok) return;
+      if(r.status!==404) throw {code:"api", status:r.status};
+      return paso("/git/ref/heads/main").then(bien).then(function(r2){ return r2.json(); }).then(function(j){
+        return paso("/git/refs", {method:"POST", body:JSON.stringify({ref:"refs/heads/"+RAMA, sha:j.object.sha})});
+      }).then(function(r3){ if(!r3.ok && r3.status!==422) throw {code:"api", status:r3.status}; });
+    }).then(function(){ sync.token = tok; return leeEstados(); }).then(function(){
+      return cifra({v:1, estados:vivos(sync.mapa)});
+    }).then(function(C){
+      var cuerpo = {message:"Activa los cambios de estado en un equipo", content:btoa(JSON.stringify(C)), branch:RAMA};
+      if(sync.sha) cuerpo.sha = sync.sha;
+      return paso("/contents/estados.json", {method:"PUT", body:JSON.stringify(cuerpo)});
+    }).then(bien).then(function(r){ return r.json(); }).then(function(j){
+      sync.sha = (j && j.content) ? j.content.sha : null; sync.mapa = vivos(sync.mapa);
+      return cifra({v:1, token:tok});
+    }).then(function(L){ guardaLlave(L); aplicaMapa(); }, function(e){ sync.token = antes; throw e; });
+  }
+  elQuitar.addEventListener("click", function(){
+    guardaLlave(null); sync.token = ""; state.resolviendo = null; state.nota = "";
+    ponModo("consulta"); toast("Clave quitada de este equipo. Desde aquí ya solo se puede consultar.");
+  });
+  elActivarBtn.addEventListener("click", function(){ elActivar.hidden = false; elLlaveErr.hidden = true; try{ elLlaveIn.focus(); }catch(e){} });
+  elLlaveNo.addEventListener("click", function(){ elActivar.hidden = true; elLlaveIn.value = ""; });
+  elActivar.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var tok = elLlaveIn.value.replace(/\s+/g,"");
+    if(elLlaveOk.disabled) return;
+    if(tok.length<20){ elLlaveErr.textContent = "Pega la clave completa: empieza por github_pat_."; elLlaveErr.hidden = false; return; }
+    elLlaveOk.disabled = true; elLlaveOk.textContent = "Guardando…"; elLlaveErr.hidden = true;
+    activar(tok).then(function(){
+      elLlaveIn.value = ""; elActivar.hidden = true; ponModo("activo"); toast("Cambios de estado activados.");
+    }, function(e){
+      elLlaveErr.textContent = (e && e.status===401) ? "GitHub no reconoce esa clave. Comprueba que la has copiado entera."
+        : (e && (e.status===403 || e.status===404)) ? "La clave no tiene permiso sobre este repositorio. Revisa que elegiste GESTION-NOTIFICACIONES y «Contents: Read and write»."
+        : (e && (e.code==="tiempo" || e.code==="red")) ? "No hay conexión con GitHub. Comprueba internet e inténtalo de nuevo."
+        : "No se ha podido guardar la clave. Inténtalo de nuevo.";
+      elLlaveErr.hidden = false;
+    }).then(function(){ elLlaveOk.disabled = false; elLlaveOk.textContent = "Guardar la clave"; });
+  });
 
   var h0=(location.hash||"").replace("#","");
   if(TABS[h0]) state.tab=h0;
@@ -591,11 +829,14 @@ details.aviso .texto{margin-top:8px;max-height:260px}
   }
   function mostrar(D){
     if(Array.isArray(D.festivos)) festivos = new Set(FESTIVOS_BASE.concat(D.festivos.filter(esISO)));
-    state.docs = (Array.isArray(D.notificaciones) ? D.notificaciones : []).filter(function(x){ return x && typeof x==="object" && typeof x.id==="string"; });
+    baseDocs = (Array.isArray(D.notificaciones) ? D.notificaciones : []).filter(function(x){ return x && typeof x==="object" && typeof x.id==="string"; });
+    state.docs = baseDocs.slice();
+    sync.aplicadoHasta = typeof D.aplicadoHasta==="string" ? D.aplicadoHasta : "";
     state.cargado = true; state.sinDb = false;
     if(typeof D.actualizado==="string" && D.actualizado) elAct.textContent = "Datos actualizados el " + D.actualizado;
     elCandado.hidden = true; elPanel.hidden = false;
     render();
+    iniciaSync();
   }
   function pedir(msg){
     elPanel.hidden = true; elCandado.hidden = false;
@@ -614,6 +855,7 @@ details.aviso .texto{margin-top:8px;max-height:260px}
     descifrar(window.DATOS_CIFRADOS, clave).then(function(D){
       if(recordar) guardar(clave);
       elClave.value = "";
+      sync.clave = clave; sync.llaves = {};
       mostrar(D);
     }, function(){
       guardar("");
@@ -627,6 +869,8 @@ details.aviso .texto{margin-top:8px;max-height:260px}
   });
   document.getElementById("bloquear").addEventListener("click", function(){
     guardar(""); state.docs = []; state.cargado = false; elLista.innerHTML = ""; elAct.textContent = "";
+    baseDocs = []; sync.clave = ""; sync.llaves = {}; sync.token = ""; sync.mapa = {}; sync.sha = null; sync.modo = "cargando";
+    state.resolviendo = null; state.nota = ""; state.ocupado = {}; elActivar.hidden = true; elLlaveIn.value = ""; elActivarBtn.hidden = true; elQuitar.hidden = true; elModo.textContent = "";
     pedir("");
   });
 
