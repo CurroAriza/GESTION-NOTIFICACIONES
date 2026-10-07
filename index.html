@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Control de notificaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{color-scheme:light}
+body{margin:0;padding:0}
+img{max-width:100%}
+[hidden]:not([hidden=until-found i]){display:none!important}
+/* Layout: libro de registro. Cabecera con las bandejas, fila de filtros y asientos apilados
+   ordenados por vencimiento; cada asiento lleva su sello de fecha y se abre en una ficha de expediente. */
+:root{
+  --bg:#EEF1F4; --surface:#FFFFFF; --surface-2:#F5F7F9; --ink:#16212C; --ink-2:#465564; --ink-3:#6D7B88; --line:#D3DAE1;
+  --accent:#0E5A6B; --accent-ink:#FFFFFF; --accent-soft:#DAECEF;
+  --crit:#B3261E; --crit-ink:#FFFFFF; --crit-soft:#FBE5E2; --crit-line:#E7A6A0;
+  --amar:#F2C200; --amar-ink:#2B2100; --amar-soft:#FFF4C7; --amar-line:#E3C45A;
+  --ok:#1F6A3D; --ok-soft:#DCF0E3;
+  --fiscal:#35479E; --fiscal-soft:#E3E7F8;
+  --laboral:#74398A; --laboral-soft:#F1E4F6;
+  --otras:#525C68; --otras-soft:#E5E9ED;
+  --font-display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --font-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F151B; --surface:#172029; --surface-2:#1D2832; --ink:#E7EDF2; --ink-2:#AEBBC7; --ink-3:#8493A0; --line:#2B3844;
+    --accent:#62C3D4; --accent-ink:#05222A; --accent-soft:#143942;
+    --crit:#FF8D83; --crit-ink:#2B0806; --crit-soft:#3A1917; --crit-line:#7C302B;
+    --amar:#F2C94C; --amar-ink:#2B2100; --amar-soft:#3A3112; --amar-line:#6E5C1D;
+    --ok:#83D6A3; --ok-soft:#153223;
+    --fiscal:#A9B6FF; --fiscal-soft:#1E2650;
+    --laboral:#DBA9EC; --laboral-soft:#36203E;
+    --otras:#B6BFC9; --otras-soft:#29323C;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F151B; --surface:#172029; --surface-2:#1D2832; --ink:#E7EDF2; --ink-2:#AEBBC7; --ink-3:#8493A0; --line:#2B3844;
+  --accent:#62C3D4; --accent-ink:#05222A; --accent-soft:#143942;
+  --crit:#FF8D83; --crit-ink:#2B0806; --crit-soft:#3A1917; --crit-line:#7C302B;
+  --amar:#F2C94C; --amar-ink:#2B2100; --amar-soft:#3A3112; --amar-line:#6E5C1D;
+  --ok:#83D6A3; --ok-soft:#153223;
+  --fiscal:#A9B6FF; --fiscal-soft:#1E2650;
+  --laboral:#DBA9EC; --laboral-soft:#36203E;
+  --otras:#B6BFC9; --otras-soft:#29323C;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.page{max-width:1080px;margin-inline:auto;padding-inline:20px;padding-block:28px 48px;display:flex;flex-direction:column;gap:18px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* Cabecera */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px}
+.eyebrow{margin:0 0 4px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+h1{margin:0;font-family:var(--font-display);font-weight:700;font-size:30px;line-height:1.1;letter-spacing:-.01em;text-wrap:balance}
+.today{margin:0;color:var(--ink-2);font-size:14px}
+.today::first-letter{text-transform:uppercase}
+.top-der{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.act{margin:0;color:var(--ink-3);font-size:13px}
+
+.alerta{display:flex;gap:10px;align-items:baseline;background:var(--crit-soft);border:1px solid var(--crit-line);color:var(--crit);border-radius:6px;padding:10px 14px;font-weight:500}
+.alerta b{font-family:var(--font-mono);font-size:17px;font-weight:500}
+.alerta-amar{background:var(--amar-soft);border-color:var(--amar-line);color:var(--ink)}
+
+/* Bandejas */
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1px;padding:10px 14px 9px;cursor:pointer;display:flex;align-items:baseline;gap:8px;font-family:var(--font-display);font-weight:600;font-size:16px;color:var(--ink-2)}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-n{font-family:var(--font-mono);font-size:13px;font-weight:500;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:0 8px;color:var(--ink-2)}
+.tab[aria-selected="true"] .tab-n{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+
+/* Filtros */
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.filtros{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.filtros-lab{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-right:4px}
+.filtro{appearance:none;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 14px;font-weight:500;color:var(--ink-2)}
+.filtro:hover{border-color:var(--ink-3);color:var(--ink)}
+.filtro[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.buscar{flex:1 1 220px;max-width:320px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 12px}
+.buscar::placeholder{color:var(--ink-3)}
+
+/* Asientos */
+.lista{display:flex;flex-direction:column;gap:8px}
+.asiento{background:var(--surface);border:1px solid var(--line);border-radius:6px;min-width:0}
+.asiento.is-rojo{background:var(--crit-soft);border-color:var(--crit-line)}
+.asiento.is-amarillo{background:var(--amar-soft);border-color:var(--amar-line)}
+.asiento-cab{appearance:none;width:100%;text-align:left;background:none;border:0;cursor:pointer;padding:12px 14px;display:grid;grid-template-columns:72px minmax(0,1fr) auto 18px;gap:6px 16px;align-items:center}
+.sello{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:4px;padding:5px 4px 6px;background:var(--surface-2);font-family:var(--font-mono);line-height:1.1;color:var(--ink-2)}
+.sello-lab{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase}
+.sello-dia{font-size:22px;font-weight:500;color:var(--ink)}
+.sello-mes{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+.is-rojo .sello{background:var(--crit);border-color:var(--crit);color:var(--crit-ink)}
+.is-rojo .sello-dia{color:var(--crit-ink)}
+.is-amarillo .sello{background:var(--amar);border-color:var(--amar);color:var(--amar-ink)}
+.is-amarillo .sello-dia{color:var(--amar-ink)}
+.sello.is-vacio .sello-dia{font-size:15px;color:var(--ink-3)}
+.asiento-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.asiento-cliente{font-family:var(--font-display);font-weight:600;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+.asiento-tipo{color:var(--ink-2);font-size:14px;overflow-wrap:anywhere}
+.asiento-org{color:var(--ink-3);font-size:13px;overflow-wrap:anywhere}
+.asiento-meta{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
+.chev{color:var(--ink-3);font-size:12px;transition:transform .15s}
+.is-abierta .chev{transform:rotate(180deg)}
+@media (prefers-reduced-motion: reduce){.chev{transition:none}}
+
+.chip{display:inline-flex;align-items:center;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:500;white-space:nowrap;border:1px solid transparent}
+.chip-fiscal{background:var(--fiscal-soft);color:var(--fiscal)}
+.chip-laboral{background:var(--laboral-soft);color:var(--laboral)}
+.chip-otras{background:var(--otras-soft);color:var(--otras)}
+.chip-vencida{background:var(--crit);color:var(--crit-ink)}
+.chip-amarillo{background:var(--amar);color:var(--amar-ink)}
+.chip-pasado{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
+.chip-ok{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
+.chip-hecho{background:var(--ok-soft);color:var(--ok)}
+.chip-neutro{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
+
+/* Ficha */
+.ficha{border-top:1px solid var(--line);padding:16px 14px 14px;display:flex;flex-direction:column;gap:16px;background:var(--surface);border-radius:0 0 6px 6px}
+.is-rojo .ficha{border-top-color:var(--crit-line)}
+.is-amarillo .ficha{border-top-color:var(--amar-line)}
+.ficha-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px 28px}
+.bloque{min-width:0;display:flex;flex-direction:column;gap:14px}
+.campo{display:flex;flex-direction:column;gap:4px;min-width:0}
+h3{margin:0;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.campo p{margin:0;max-width:68ch;white-space:pre-line;overflow-wrap:anywhere}
+.plazos{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.plazos li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:14px}
+.plazos .etq{flex:1 1 180px;min-width:0;color:var(--ink-2)}
+dl{margin:0;display:grid;grid-template-columns:minmax(96px,auto) minmax(0,1fr);gap:6px 14px;font-size:14px}
+dt{color:var(--ink-3)}
+dd{margin:0;overflow-wrap:anywhere;min-width:0}
+dd select{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:2px 6px;max-width:100%}
+a{color:var(--accent)}
+.resp{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.resp-mail{font-family:var(--font-mono);font-size:13.5px;user-select:all;overflow-wrap:anywhere}
+.resp-fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+details.aviso summary{cursor:pointer;color:var(--ink-2);font-size:13.5px}
+.texto{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--font-mono);font-size:13px;line-height:1.55;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:12px 14px;max-height:420px;overflow:auto}
+details.aviso .texto{margin-top:8px;max-height:260px}
+.borrador-cab{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.sin-borrador{margin:0;color:var(--ink-2)}
+
+.acciones{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:14px}
+.btn{appearance:none;cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 14px;font-weight:500}
+.btn:hover{border-color:var(--ink-3)}
+.btn-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn-pri:hover{border-color:var(--accent);filter:brightness(1.08)}
+.btn-min{padding:4px 10px;font-size:13.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.nota-res{flex:1 1 100%;display:flex;flex-direction:column;gap:6px}
+.nota-res label{font-size:13.5px;color:var(--ink-2)}
+.nota-res textarea{width:100%;min-height:64px;resize:vertical;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.hecho{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:14px;color:var(--ink-2)}
+.solo-lectura{font-size:13.5px;color:var(--ink-3)}
+
+.vacio{border:1px dashed var(--line);border-radius:6px;padding:36px 20px;text-align:center;color:var(--ink-2);background:var(--surface)}
+.vacio strong{display:block;font-family:var(--font-display);font-size:18px;color:var(--ink);margin-bottom:4px}
+.pie{color:var(--ink-3);font-size:13px;max-width:78ch;margin:6px 0 0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom, 0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:6px;font-size:14px;max-width:calc(100% - 32px);z-index:10}
+
+@media (max-width:720px){
+  .page{padding-inline:16px;padding-block:20px 40px}
+  h1{font-size:25px}
+  .top-der{align-items:flex-start}
+  .asiento-cab{grid-template-columns:60px minmax(0,1fr) 16px;gap:8px 12px}
+  .asiento-meta{grid-column:1 / -1;justify-content:flex-start}
+  .chev{grid-column:3;grid-row:1}
+  .ficha-grid{grid-template-columns:minmax(0,1fr)}
+  .tab{padding-inline:10px;font-size:15px}
+  .buscar{max-width:none}
+}
+
+/* Pantalla de contraseña */
+.candado{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.candado-caja{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:26px 24px 24px;display:flex;flex-direction:column;gap:14px}
+.candado-caja h1{font-size:25px}
+.candado-txt{margin:0;color:var(--ink-2)}
+.candado-campo{display:flex;flex-direction:column;gap:5px}
+.candado-campo label{font-size:13.5px;color:var(--ink-2);font-weight:500}
+.candado-campo input{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 12px;width:100%;font-family:var(--font-mono);font-size:16px}
+.candado-rec{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink-2)}
+.candado-err{margin:0;color:var(--crit);font-weight:500}
+.candado-caja .btn{padding:9px 14px}
+.act-fila{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px 10px}
+@media (max-width:720px){.act-fila{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<div class="candado" id="candado" hidden>
+  <form class="candado-caja" id="candado-form">
+    <div>
+      <p class="eyebrow">Gestión de certificados · WIT Abogados</p>
+      <h1>Control de notificaciones</h1>
+    </div>
+    <p class="candado-txt" id="candado-txt">Los datos de esta página están cifrados. Escribe la contraseña para verlos.</p>
+    <div class="candado-campo">
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required>
+    </div>
+    <label class="candado-rec"><input type="checkbox" id="recordar"> Recordar en este equipo</label>
+    <p class="candado-err" id="candado-err" role="alert" hidden></p>
+    <button class="btn btn-pri" type="submit" id="candado-btn">Abrir</button>
+  </form>
+</div>
+<div class="page" id="panel" hidden>
+  <header class="top">
+    <div>
+      <p class="eyebrow">Gestión de certificados · WIT Abogados</p>
+      <h1>Control de notificaciones</h1>
+    </div>
+    <div class="top-der"><p class="today" id="hoy"></p><div class="act-fila"><p class="act" id="act"></p><button class="btn btn-min" id="bloquear" type="button">Bloquear</button></div></div>
+  </header>
+
+  <div class="alerta" id="alerta" role="status" hidden></div>
+  <div class="alerta alerta-amar" id="alerta-amar" role="status" hidden></div>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Pantallas">
+    <button class="tab" role="tab" id="tab-pendientes" data-tab="pendientes" aria-selected="true">Pendientes <span class="tab-n" data-n="pendientes">–</span></button>
+    <button class="tab" role="tab" id="tab-resueltas" data-tab="resueltas" aria-selected="false">Resueltas <span class="tab-n" data-n="resueltas">–</span></button>
+    <button class="tab" role="tab" id="tab-archivadas" data-tab="archivadas" aria-selected="false">Archivadas <span class="tab-n" data-n="archivadas">–</span></button>
+    <button class="tab" role="tab" id="tab-desechadas" data-tab="desechadas" aria-selected="false">Desechadas <span class="tab-n" data-n="desechadas">–</span></button>
+  </nav>
+
+  <div class="toolbar">
+    <div class="filtros" id="filtros" role="group" aria-label="Filtrar por naturaleza">
+      <span class="filtros-lab">Naturaleza</span>
+      <button class="filtro" id="f-todas" data-filtro="todas" aria-pressed="true">Todas</button>
+      <button class="filtro" id="f-fiscal" data-filtro="fiscal" aria-pressed="false">Fiscal</button>
+      <button class="filtro" id="f-laboral" data-filtro="laboral" aria-pressed="false">Laboral</button>
+      <button class="filtro" id="f-otras" data-filtro="otras" aria-pressed="false">Otras</button>
+    </div>
+    <input class="buscar" id="buscar" type="search" placeholder="Buscar cliente, organismo o referencia" aria-label="Buscar">
+  </div>
+
+  <main class="lista" id="lista" aria-live="polite">
+    <div class="vacio"><strong>Cargando notificaciones…</strong></div>
+  </main>
+
+  <p class="pie">Los plazos se cuentan desde la fecha en que la notificación se guardó en la carpeta. Días hábiles: de lunes a viernes, sin los festivos nacionales, de la Comunidad de Madrid y de Madrid capital. Una notificación pendiente se pone en amarillo cuando quedan 2 días hábiles o menos para un plazo de alegación o recurso, y en rojo solo cuando ya ha vencido el último plazo de alegación o recurso.</p>
+  <p class="pie">Versión de consulta: muestra las notificaciones tal como estaban en la fecha de actualización indicada arriba. Los cambios de estado (resuelta, archivada, devolver a pendientes) se hacen en el panel de Claude.</p>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  "use strict";
+  var FESTIVOS_BASE = ["2026-01-01","2026-01-06","2026-04-02","2026-04-03","2026-05-01","2026-05-02","2026-05-15","2026-08-15","2026-10-12","2026-11-02","2026-11-09","2026-12-07","2026-12-08","2026-12-25"];
+  var festivos = new Set(FESTIVOS_BASE);
+  var TABS = {pendientes:"pendiente", resueltas:"resuelta", archivadas:"archivada", desechadas:"desechada"};
+  var NAT = {fiscal:"Fiscal", laboral:"Laboral", otras:"Otras"};
+  var MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+  var state = {docs:[], cargado:false, sinDb:false, error:false, tab:"pendientes", filtro:"todas", q:"",
+               abierta:null, hoy:""};
+
+  var elLista = document.getElementById("lista");
+  var elAlerta = document.getElementById("alerta");
+  var elAlertaAmar = document.getElementById("alerta-amar");
+  var elHoy = document.getElementById("hoy");
+  var elAct = document.getElementById("act");
+  var elToast = document.getElementById("toast");
+  var elTabs = document.getElementById("tabs");
+  var elFiltros = document.getElementById("filtros");
+  var elBuscar = document.getElementById("buscar");
+
+  /* ---------- fechas ---------- */
+  function hoyISO(){
+    try{ return new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Madrid",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()); }
+    catch(e){ return new Date().toISOString().slice(0,10); }
+  }
+  function esISO(s){ return typeof s==="string" && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+  function aUTC(iso){ var p=iso.split("-"); return Date.UTC(+p[0], +p[1]-1, +p[2]); }
+  function sumar(iso,n){ return new Date(aUTC(iso)+n*864e5).toISOString().slice(0,10); }
+  function esHabil(iso){ var d=new Date(aUTC(iso)).getUTCDay(); return d!==0 && d!==6 && !festivos.has(iso); }
+  function diasNaturales(a,b){ return Math.round((aUTC(b)-aUTC(a))/864e5); }
+  function diasHabiles(a,b){ var n=0; for(var d=sumar(a,1); d<=b; d=sumar(d,1)){ if(esHabil(d)) n++; } return n; }
+  function fmt(iso){ if(!esISO(iso)) return ""; var p=iso.split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+  // Estado de un plazo suelto: "pasado", "amarillo" (2 días hábiles o menos) u "ok".
+  function situacion(fecha,hoy){
+    if(!esISO(fecha)) return null;
+    if(fecha<hoy) return {nivel:"pasado", texto:"Vencido"};
+    if(fecha===hoy) return {nivel:"amarillo", texto:"Vence hoy"};
+    var h=diasHabiles(hoy,fecha), nat=diasNaturales(hoy,fecha);
+    if(h<=2){
+      var t = nat===1 ? "Vence mañana" : (h===2 ? "Quedan 2 días hábiles" : (h===1 ? "Queda 1 día hábil" : "Vence en "+nat+" días"));
+      return {nivel:"amarillo", texto:t};
+    }
+    return {nivel:"ok", texto:"Quedan "+h+" días hábiles"};
+  }
+  // Plazos de alegación o recurso, de más próximo a más lejano.
+  function plazosQueCuentan(n){
+    var l=n.plazos.filter(function(p){ return p.cuenta && esISO(p.fecha); });
+    if(!l.length && n.vence) l=[{etiqueta:"Vencimiento", fecha:n.vence, cuenta:true}];
+    return l.slice().sort(function(a,b){ return a.fecha.localeCompare(b.fecha); });
+  }
+  // Roja solo cuando ha vencido el último plazo de alegación o recurso.
+  // Amarilla cuando al siguiente plazo abierto le quedan 2 días hábiles o menos.
+  function alertaDe(n,hoy){
+    var l=plazosQueCuentan(n); if(!l.length) return null;
+    var ultimo=l[l.length-1].fecha, abiertos=l.filter(function(p){ return p.fecha>=hoy; });
+    if(!abiertos.length){
+      var v=diasNaturales(ultimo,hoy);
+      return {nivel:"vencida", fecha:ultimo, ultimo:ultimo, texto: v===1 ? "Venció ayer" : "Vencida hace "+v+" días", inicialVencido:false};
+    }
+    var s=situacion(abiertos[0].fecha,hoy);
+    return {nivel:s.nivel, fecha:abiertos[0].fecha, ultimo:ultimo, texto:s.texto,
+            inicialVencido: !!(n.vence && n.vence<hoy) || l.some(function(p){ return p.fecha<hoy; })};
+  }
+
+  /* ---------- utilidades ---------- */
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];}); }
+  function txt(v){ return typeof v==="string" ? v : (typeof v==="number" ? String(v) : ""); }
+  function norm(d){
+    var resp = d.responsable && typeof d.responsable==="object" ? d.responsable : {};
+    return {
+      id:d.id, cliente:txt(d.cliente)||"Sin cliente", nif:txt(d.nif), domicilio:txt(d.domicilio),
+      naturaleza: NAT[d.naturaleza] ? d.naturaleza : "otras",
+      organismo:txt(d.organismo), tipo:txt(d.tipo), referencia:txt(d.referencia), importe:txt(d.importe),
+      fechaDocumento:txt(d.fechaDocumento), guardada: esISO(d.guardada)?d.guardada:"",
+      resumen:txt(d.resumen), plazoTexto:txt(d.plazoTexto), vence: esISO(d.vence)?d.vence:"",
+      plazos: Array.isArray(d.plazos) ? d.plazos.filter(function(p){return p && typeof p==="object";}).map(function(p){return {etiqueta:txt(p.etiqueta), fecha:txt(p.fecha), cuenta:p.cuenta!==false};}) : [],
+      solucion:txt(d.solucion), borrador:txt(d.borrador),
+      estado: ["pendiente","resuelta","archivada","desechada"].indexOf(d.estado)>=0 ? d.estado : "pendiente",
+      carpeta:txt(d.carpeta), respNombre:txt(resp.nombre), respEmail:txt(resp.email),
+      avisoEnviado: d.avisoEnviado===true, archivo:txt(d.archivo),
+      enlace: /^https:\/\//.test(txt(d.enlace)) ? d.enlace : "",
+      resueltaEl: esISO(d.resueltaEl)?d.resueltaEl:"", notaResolucion:txt(d.notaResolucion)
+    };
+  }
+  var toastT=null;
+  function toast(m){ elToast.textContent=m; elToast.hidden=false; clearTimeout(toastT); toastT=setTimeout(function(){ elToast.hidden=true; }, 3800); }
+  function copiar(texto, okMsg, fallbackEl){
+    var falla=function(){
+      if(fallbackEl){ try{ var r=document.createRange(); r.selectNodeContents(fallbackEl); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){} }
+      toast("No se pudo copiar automáticamente. El texto queda seleccionado: cópialo con Ctrl+C.");
+    };
+    try{ navigator.clipboard.writeText(texto).then(function(){ toast(okMsg); }, falla); }catch(e){ falla(); }
+  }
+  function textoAviso(n){
+    var l=[];
+    l.push("Asunto: Notificación · "+n.cliente+" · "+n.tipo);
+    l.push("");
+    l.push((n.respNombre ? "Hola, "+n.respNombre+":" : "Hola:"));
+    l.push("");
+    l.push("Ha entrado esta notificación de "+n.cliente+(n.organismo?" ("+n.organismo+")":"")+".");
+    l.push("");
+    l.push("RESUMEN");
+    l.push(n.resumen);
+    l.push("");
+    l.push("PLAZO");
+    l.push(n.plazoTexto);
+    n.plazos.forEach(function(p){ if(esISO(p.fecha)) l.push("- "+p.etiqueta+": "+fmt(p.fecha)); });
+    l.push("");
+    l.push("POSIBLE SOLUCIÓN");
+    l.push(n.solucion);
+    if(n.referencia){ l.push(""); l.push("Referencia: "+n.referencia); }
+    if(n.enlace){ l.push("Archivo: "+encodeURI(n.enlace)); }
+    return l.join("\n");
+  }
+
+  /* ---------- pintar ---------- */
+  function chipNat(n){ return '<span class="chip chip-'+n.naturaleza+'">'+NAT[n.naturaleza]+'</span>'; }
+  function sello(lab,iso){
+    if(!esISO(iso)) return '<span class="sello is-vacio"><span class="sello-lab">'+esc(lab)+'</span><span class="sello-dia">s/f</span></span>';
+    var p=iso.split("-");
+    return '<span class="sello"><span class="sello-lab">'+esc(lab)+'</span><span class="sello-dia">'+p[2]+'</span><span class="sello-mes">'+MESES[+p[1]-1]+' '+p[0]+'</span></span>';
+  }
+  function dato(dt,dd){ return dd ? '<dt>'+esc(dt)+'</dt><dd>'+dd+'</dd>' : ''; }
+
+  function ficha(n,hoy){
+    var h='<div class="ficha"><div class="ficha-grid"><section class="bloque">';
+    h+='<div class="campo"><h3>Qué nos piden</h3><p>'+esc(n.resumen||"Sin resumen.")+'</p></div>';
+    h+='<div class="campo"><h3>Plazo</h3><p>'+esc(n.plazoTexto||"Sin plazo indicado.")+'</p>';
+    if(n.plazos.length){
+      h+='<ul class="plazos">';
+      var al0 = n.estado==="pendiente" ? alertaDe(n,hoy) : null;
+      n.plazos.forEach(function(p){
+        var s = n.estado==="pendiente" ? situacion(p.fecha,hoy) : null, chip="";
+        if(s){
+          var niv=s.nivel, tx=s.texto;
+          if(niv==="pasado" && al0 && al0.nivel==="vencida" && p.cuenta && p.fecha===al0.ultimo){ niv="vencida"; tx="Último plazo vencido"; }
+          else if(niv==="amarillo" && !p.cuenta){ niv="ok"; }
+          chip='<span class="chip chip-'+niv+'">'+esc(tx)+'</span>';
+        }
+        h+='<li><span class="etq">'+esc(p.etiqueta)+'</span><span class="mono">'+esc(fmt(p.fecha)||p.fecha)+'</span>'+chip+'</li>';
+      });
+      h+='</ul>';
+    }
+    h+='</div>';
+    h+='<div class="campo"><h3>Posible solución</h3><p>'+esc(n.solucion||"Sin propuesta.")+'</p></div>';
+    h+='</section><section class="bloque">';
+    h+='<div class="campo"><h3>Datos de la notificación</h3><dl>';
+    h+=dato("Cliente",esc(n.cliente));
+    h+=dato("NIF",n.nif?'<span class="mono">'+esc(n.nif)+'</span>':'');
+    h+=dato("Domicilio",esc(n.domicilio));
+    h+=dato("Organismo",esc(n.organismo));
+    h+=dato("Naturaleza",NAT[n.naturaleza]);
+    h+=dato("Tipo",esc(n.tipo));
+    h+=dato("Referencia",n.referencia?'<span class="mono">'+esc(n.referencia)+'</span>':'');
+    h+=dato("Importe",esc(n.importe));
+    h+=dato("Fecha del documento",esc(n.fechaDocumento));
+    h+=dato("Guardada",n.guardada?'<span class="mono">'+fmt(n.guardada)+'</span>':'');
+    var lq=plazosQueCuentan(n);
+    h+=dato("Plazo inicial",n.vence?'<span class="mono">'+fmt(n.vence)+'</span>':'');
+    h+=dato("Último plazo",lq.length?'<span class="mono">'+fmt(lq[lq.length-1].fecha)+'</span>':'Sin vencimiento');
+    var carpetaDebida = {pendiente:"Pendientes",resuelta:"Resueltas",archivada:"Archivadas",desechada:"Desechadas"}[n.estado];
+    var porMover = n.carpeta && n.carpeta.toLowerCase()!==carpetaDebida.toLowerCase();
+    h+=dato("Carpeta del PDF", n.carpeta ? esc(n.carpeta)+(porMover ? ' <span class="chip chip-pasado">Por mover a '+carpetaDebida+'</span>' : '') : '');
+    h+=dato("Archivo", n.enlace ? '<a href="'+esc(encodeURI(n.enlace))+'" target="_blank" rel="noopener">'+esc(n.archivo||"Abrir PDF")+'</a>' : esc(n.archivo));
+    h+='</dl></div>';
+    h+='<div class="campo"><h3>Aviso al responsable</h3><div class="resp">';
+    if(n.respEmail){
+      var av=textoAviso(n);
+      h+='<div>'+esc(n.respNombre)+' · <span class="resp-mail">'+esc(n.respEmail)+'</span></div>';
+      h+='<div class="resp-fila"><span class="chip '+(n.avisoEnviado?'chip-hecho':'chip-neutro')+'">'+(n.avisoEnviado?'Aviso enviado':'Aviso sin enviar')+'</span>'+
+         '<button class="btn btn-min" data-action="copiar-aviso" data-foco="copav">Copiar aviso</button></div>';
+      h+='<details class="aviso"><summary>Ver el texto del aviso</summary><pre class="texto" data-aviso-texto>'+esc(av)+'</pre></details>';
+    }else{
+      h+='<div>Sin responsable asignado para este tipo de notificación.</div>';
+    }
+    h+='</div></div></section></div>';
+    h+='<section class="campo"><div class="borrador-cab"><h3>Borrador de contestación</h3>'+(n.borrador?'<button class="btn btn-min" data-action="copiar-borrador" data-foco="copbo">Copiar borrador</button>':'')+'</div>';
+    h+= n.borrador ? '<pre class="texto" data-borrador-texto>'+esc(n.borrador)+'</pre>' : '<p class="sin-borrador">No requiere escrito de contestación.</p>';
+    h+='</section>';
+
+    if(n.estado==="resuelta"){
+      h+='<div class="acciones"><div class="hecho"><span class="chip chip-hecho">Resuelta'+(n.resueltaEl?' el '+fmt(n.resueltaEl):'')+'</span>'+(n.notaResolucion?'<span>'+esc(n.notaResolucion)+'</span>':'')+'</div></div>';
+    }
+    h+='</div>';
+    return h;
+  }
+
+  function asiento(n,hoy){
+    var abierta = state.abierta===n.id, al=null, lab, fecha, chips=chipNat(n);
+    if(n.estado==="pendiente"){
+      al=alertaDe(n,hoy); lab="Vence"; fecha = al ? al.fecha : n.vence;
+      if(al){
+        chips += '<span class="chip chip-'+al.nivel+'">'+esc(al.texto)+'</span>';
+        if(al.inicialVencido) chips += '<span class="chip chip-pasado">Plazo inicial vencido · queda recurso</span>';
+      }else{ chips += '<span class="chip chip-neutro">Sin vencimiento</span>'; }
+    }else if(n.estado==="resuelta"){
+      lab="Resuelta"; fecha=n.resueltaEl; chips+='<span class="chip chip-hecho">Resuelta</span>';
+    }else{
+      lab="Guardada"; fecha=n.guardada; chips+='<span class="chip chip-neutro">'+(n.estado==="archivada"?"Informativa":"Desechada")+'</span>';
+    }
+    var rojo = al && al.nivel==="vencida", amar = al && al.nivel==="amarillo";
+    return '<article class="asiento'+(rojo?' is-rojo':'')+(amar?' is-amarillo':'')+(abierta?' is-abierta':'')+'" data-id="'+esc(n.id)+'">'+
+      '<button class="asiento-cab" data-action="toggle" data-foco="cab" aria-expanded="'+abierta+'">'+
+        sello(lab,fecha)+
+        '<span class="asiento-main"><span class="asiento-cliente">'+esc(n.cliente)+'</span><span class="asiento-tipo">'+esc(n.tipo)+'</span><span class="asiento-org">'+esc(n.organismo)+'</span></span>'+
+        '<span class="asiento-meta">'+chips+'</span><span class="chev" aria-hidden="true">▼</span>'+
+      '</button>'+(abierta?ficha(n,hoy):'')+'</article>';
+  }
+
+  function render(){
+    var hoy = state.hoy = hoyISO();
+    try{ elHoy.textContent = "Hoy, " + new Intl.DateTimeFormat("es-ES",{timeZone:"Europe/Madrid",weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date()); }catch(e){ elHoy.textContent = fmt(hoy); }
+
+    var items = state.docs.map(norm);
+    var cuenta = {pendiente:0,resuelta:0,archivada:0,desechada:0}, rojas=0, amarillas=0;
+    items.forEach(function(n){
+      cuenta[n.estado]++;
+      if(n.estado==="pendiente"){ var a=alertaDe(n,hoy); if(a && a.nivel==="vencida") rojas++; else if(a && a.nivel==="amarillo") amarillas++; }
+    });
+    Array.prototype.forEach.call(elTabs.querySelectorAll(".tab"),function(b){
+      b.setAttribute("aria-selected", String(b.dataset.tab===state.tab));
+      b.querySelector(".tab-n").textContent = state.cargado ? cuenta[TABS[b.dataset.tab]] : "–";
+    });
+    Array.prototype.forEach.call(elFiltros.querySelectorAll(".filtro"),function(b){ b.setAttribute("aria-pressed", String(b.dataset.filtro===state.filtro)); });
+
+    if(state.cargado && rojas>0){
+      elAlerta.hidden=false;
+      elAlerta.innerHTML='<b>'+rojas+'</b><span>'+(rojas===1?'notificación pendiente tiene vencido el último plazo de alegación o recurso.':'notificaciones pendientes tienen vencido el último plazo de alegación o recurso.')+'</span>';
+    }else{ elAlerta.hidden=true; }
+    if(state.cargado && amarillas>0){
+      elAlertaAmar.hidden=false;
+      elAlertaAmar.innerHTML='<b>'+amarillas+'</b><span>'+(amarillas===1?'notificación pendiente está a 2 días hábiles o menos de un plazo de alegación o recurso.':'notificaciones pendientes están a 2 días hábiles o menos de un plazo de alegación o recurso.')+'</span>';
+    }else{ elAlertaAmar.hidden=true; }
+
+    var foco = capturaFoco();
+    if(!state.cargado){
+      elLista.innerHTML = state.sinDb
+        ? '<div class="vacio"><strong>No se han encontrado los datos</strong>Comprueba que el archivo datos.js está en la misma carpeta que esta página.</div>'
+        : state.error
+          ? '<div class="vacio"><strong>No se han podido leer las notificaciones</strong>Recarga la página para volver a intentarlo.</div>'
+          : '<div class="vacio"><strong>Cargando notificaciones…</strong></div>';
+      return;
+    }
+    var est=TABS[state.tab], q=state.q.trim().toLowerCase();
+    var vis = items.filter(function(n){
+      if(n.estado!==est) return false;
+      if(state.filtro!=="todas" && n.naturaleza!==state.filtro) return false;
+      if(q && (n.cliente+" "+n.nif+" "+n.organismo+" "+n.tipo+" "+n.referencia+" "+n.resumen).toLowerCase().indexOf(q)<0) return false;
+      return true;
+    });
+    vis.sort(function(a,b){
+      if(est==="pendiente"){
+        var fa=alertaDe(a,hoy), fb=alertaDe(b,hoy);
+        return (fa?fa.fecha:"9999").localeCompare(fb?fb.fecha:"9999") || a.cliente.localeCompare(b.cliente);
+      }
+      var ka = est==="resuelta" ? a.resueltaEl : a.guardada, kb = est==="resuelta" ? b.resueltaEl : b.guardada;
+      return (kb||"").localeCompare(ka||"") || a.cliente.localeCompare(b.cliente);
+    });
+    if(!vis.length){
+      var filtrado = state.filtro!=="todas" || q;
+      var msg = {
+        pendiente:["No hay notificaciones pendientes","Las que entren en la carpeta y pidan una actuación aparecerán aquí."],
+        resuelta:["Todavía no hay notificaciones resueltas","Las que se marquen como resueltas en el panel aparecerán aquí."],
+        archivada:["No hay notificaciones archivadas","Aquí van las meramente informativas, que no necesitan resolución."],
+        desechada:["No hay notificaciones desechadas","Aquí van los reconocimientos de alta o baja de la Seguridad Social."]
+      }[est];
+      elLista.innerHTML='<div class="vacio"><strong>'+(filtrado?"Ninguna notificación coincide con el filtro":msg[0])+'</strong>'+(filtrado?"Prueba con otra naturaleza o borra la búsqueda.":msg[1])+'</div>';
+      return;
+    }
+    elLista.innerHTML = vis.map(function(n){ return asiento(n,hoy); }).join("");
+    restauraFoco(foco);
+  }
+  function capturaFoco(){
+    var a=document.activeElement; if(!a || !elLista.contains(a) || !a.dataset || !a.dataset.foco) return null;
+    var art=a.closest("[data-id]"); if(!art) return null;
+    var f={id:art.dataset.id, key:a.dataset.foco, s:null, e:null};
+    try{ f.s=a.selectionStart; f.e=a.selectionEnd; }catch(e){}
+    return f;
+  }
+  function restauraFoco(f){
+    if(!f) return;
+    var art=null, arts=elLista.querySelectorAll("[data-id]");
+    for(var i=0;i<arts.length;i++){ if(arts[i].dataset.id===f.id){ art=arts[i]; break; } }
+    var el = art && art.querySelector('[data-foco="'+f.key+'"]');
+    if(!el) return;
+    try{ el.focus({preventScroll:true}); if(f.s!=null && el.setSelectionRange) el.setSelectionRange(f.s,f.e); }catch(e){}
+  }
+  function porId(id){ for(var i=0;i<state.docs.length;i++){ if(state.docs[i].id===id) return norm(state.docs[i]); } return null; }
+
+  /* ---------- eventos ---------- */
+  elLista.addEventListener("click",function(ev){
+    var b=ev.target.closest("[data-action]"); if(!b || b.disabled) return;
+    var art=b.closest("[data-id]"); if(!art) return;
+    var id=art.dataset.id, n=porId(id); if(!n) return;
+    switch(b.dataset.action){
+      case "toggle": state.abierta = state.abierta===id ? null : id; render(); break;
+      case "copiar-aviso": copiar(textoAviso(n),"Aviso copiado.",null); var d=art.querySelector("details.aviso"); if(d) d.open=true; break;
+      case "copiar-borrador": copiar(n.borrador,"Borrador copiado.",art.querySelector("[data-borrador-texto]")); break;
+    }
+  });
+  elTabs.addEventListener("click",function(ev){
+    var b=ev.target.closest(".tab"); if(!b) return;
+    state.tab=b.dataset.tab; state.abierta=null;
+    try{ history.replaceState(null,"","#"+state.tab); }catch(e){}
+    render();
+  });
+  elFiltros.addEventListener("click",function(ev){ var b=ev.target.closest(".filtro"); if(!b) return; state.filtro=b.dataset.filtro; render(); });
+  elBuscar.addEventListener("input",function(){ state.q=elBuscar.value; render(); });
+
+  var h0=(location.hash||"").replace("#","");
+  if(TABS[h0]) state.tab=h0;
+  render();
+  setInterval(function(){ if(hoyISO()!==state.hoy) render(); }, 5*60*1000);
+
+  /* ---------- datos cifrados ---------- */
+  // Los datos están en datos-cifrados.js, cifrados con AES-256-GCM. La clave sale de la contraseña
+  // (PBKDF2-SHA256). Sin la contraseña no se pueden leer, ni aquí ni en el repositorio.
+  var CLAVE_LS = "control-notificaciones-clave";
+  var elPanel = document.getElementById("panel"), elCandado = document.getElementById("candado");
+  var elForm = document.getElementById("candado-form"), elClave = document.getElementById("clave");
+  var elRec = document.getElementById("recordar"), elErr = document.getElementById("candado-err");
+  var elBtn = document.getElementById("candado-btn"), elTxt = document.getElementById("candado-txt");
+
+  function guardada(){ try{ return localStorage.getItem(CLAVE_LS) || ""; }catch(e){ return ""; } }
+  function guardar(c){ try{ if(c) localStorage.setItem(CLAVE_LS,c); else localStorage.removeItem(CLAVE_LS); }catch(e){} }
+  function normaliza(c){ return String(c||"").replace(/\s+/g,"").toLowerCase(); }
+  function bytes(b64){ var bin=atob(b64), u=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u; }
+  function descifrar(C, clave){
+    return crypto.subtle.importKey("raw", new TextEncoder().encode(clave), "PBKDF2", false, ["deriveKey"]).then(function(k){
+      return crypto.subtle.deriveKey({name:"PBKDF2", salt:bytes(C.salt), iterations:C.iter, hash:"SHA-256"}, k, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+    }).then(function(key){
+      return crypto.subtle.decrypt({name:"AES-GCM", iv:bytes(C.iv)}, key, bytes(C.datos));
+    }).then(function(buf){ return JSON.parse(new TextDecoder().decode(buf)); });
+  }
+  function mostrar(D){
+    if(Array.isArray(D.festivos)) festivos = new Set(FESTIVOS_BASE.concat(D.festivos.filter(esISO)));
+    state.docs = (Array.isArray(D.notificaciones) ? D.notificaciones : []).filter(function(x){ return x && typeof x==="object" && typeof x.id==="string"; });
+    state.cargado = true; state.sinDb = false;
+    if(typeof D.actualizado==="string" && D.actualizado) elAct.textContent = "Datos actualizados el " + D.actualizado;
+    elCandado.hidden = true; elPanel.hidden = false;
+    render();
+  }
+  function pedir(msg){
+    elPanel.hidden = true; elCandado.hidden = false;
+    elBtn.disabled = false; elBtn.textContent = "Abrir";
+    if(msg){ elErr.textContent = msg; elErr.hidden = false; } else { elErr.hidden = true; }
+    try{ elClave.focus(); }catch(e){}
+  }
+  function sinDatos(titulo, detalle){
+    elCandado.hidden = false; elPanel.hidden = true;
+    elTxt.textContent = titulo + " " + detalle;
+    elForm.querySelector(".candado-campo").hidden = true; elForm.querySelector(".candado-rec").hidden = true;
+    elBtn.hidden = true; elErr.hidden = true;
+  }
+  function abrir(clave, recordar, automatico){
+    elBtn.disabled = true; elBtn.textContent = "Abriendo…"; elErr.hidden = true;
+    descifrar(window.DATOS_CIFRADOS, clave).then(function(D){
+      if(recordar) guardar(clave);
+      elClave.value = "";
+      mostrar(D);
+    }, function(){
+      guardar("");
+      pedir(automatico ? "La contraseña guardada en este equipo ya no vale. Escribe la nueva." : "Contraseña incorrecta.");
+    });
+  }
+  elForm.addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var c = normaliza(elClave.value); if(!c || elBtn.disabled) return;
+    abrir(c, elRec.checked, false);
+  });
+  document.getElementById("bloquear").addEventListener("click", function(){
+    guardar(""); state.docs = []; state.cargado = false; elLista.innerHTML = ""; elAct.textContent = "";
+    pedir("");
+  });
+
+  var s = document.createElement("script");
+  s.src = "datos-cifrados.js?v=" + Date.now();
+  s.onload = function(){
+    var C = window.DATOS_CIFRADOS;
+    if(!C || !C.salt || !C.iv || !C.datos){ sinDatos("No se han encontrado los datos.", "Comprueba que el archivo datos-cifrados.js está en la misma carpeta que esta página."); return; }
+    if(!window.crypto || !crypto.subtle){ sinDatos("Este navegador no puede descifrar los datos.", "Abre la página con su dirección https en un navegador actualizado."); return; }
+    var g = guardada();
+    if(g) abrir(g, true, true); else pedir("");
+  };
+  s.onerror = function(){ sinDatos("No se han encontrado los datos.", "Comprueba que el archivo datos-cifrados.js está en la misma carpeta que esta página."); };
+  document.head.appendChild(s);
+})();
+
+</script>
+</body>
+</html>
