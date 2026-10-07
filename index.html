@@ -249,7 +249,7 @@ details.aviso .texto{margin-top:8px;max-height:260px}
   </main>
 
   <p class="pie">Los plazos se cuentan desde la fecha en que la notificación se guardó en la carpeta. Días hábiles: de lunes a viernes, sin los festivos nacionales, de la Comunidad de Madrid y de Madrid capital. Una notificación pendiente se pone en amarillo cuando quedan 2 días hábiles o menos para un plazo de alegación o recurso, y en rojo solo cuando ya ha vencido el último plazo de alegación o recurso.</p>
-  <p class="pie">Versión de consulta: muestra las notificaciones tal como estaban en la fecha de actualización indicada arriba. Los cambios de estado (resuelta, archivada, devolver a pendientes) se hacen en el panel de Claude.</p>
+  <p class="pie">Versión de consulta: muestra las notificaciones tal como estaban en la fecha de actualización indicada arriba. Los cambios de estado (pasar a pendientes, resueltas o archivadas) se hacen en el panel de Claude y llegan aquí en la siguiente actualización.</p>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -435,7 +435,7 @@ details.aviso .texto{margin-top:8px;max-height:260px}
     h+= n.borrador ? '<pre class="texto" data-borrador-texto>'+esc(n.borrador)+'</pre>' : '<p class="sin-borrador">No requiere escrito de contestación.</p>';
     h+='</section>';
 
-    if(n.estado==="resuelta"){
+    if(n.estado==="resuelta" || (n.estado==="archivada" && (n.resueltaEl || n.notaResolucion))){
       h+='<div class="acciones"><div class="hecho"><span class="chip chip-hecho">Resuelta'+(n.resueltaEl?' el '+fmt(n.resueltaEl):'')+'</span>'+(n.notaResolucion?'<span>'+esc(n.notaResolucion)+'</span>':'')+'</div></div>';
     }
     h+='</div>';
